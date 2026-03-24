@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A'Thuraya City — HSE Master Live Dashboard</title>
+<style>
+  :root {
+    --navy:   #0D2B55;
+    --navy2:  #091E38;
+    --at:     #154360;
+    --tg:     #784212;
+    --proj:   #0E6655;
+    --teal:   #117A65;
+    --red:    #C0392B;
+    --green:  #1E8449;
+    --amber:  #D68910;
+    --orange: #D35400;
+    --white:  #FFFFFF;
+    --lgray:  #F2F3F4;
+    --mgray:  #D5D8DC;
+    --dark:   #1C2833;
+    --lred:   #FADBD8;
+    --lgreen: #D5F5E3;
+    --lamber: #FDEBD0;
+    --lblue:  #D6EAF8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0F172A; color: var(--dark); }
+
+  /* ── HEADER ──────────────────────────────────────────────────────── */
+  .top-bar { background: linear-gradient(135deg, var(--navy) 0%, #1A3A6B 100%); padding: 18px 28px 14px; border-bottom: 3px solid #2563EB; }
+  .top-bar h1 { color: white; font-size: 1.7rem; font-weight: 700; letter-spacing: -0.3px; }
+  .top-bar h1 span { color: #64B5F6; }
+  .top-bar p { color: #90CAF9; font-size: 0.78rem; margin-top: 4px; }
+  .top-meta { display: flex; gap: 18px; margin-top: 10px; flex-wrap: wrap; }
+  .badge { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #E0F2FE; font-size: 0.72rem; padding: 3px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── NAV TABS ────────────────────────────────────────────────────── */
+  .tabs { background: var(--navy2); display: flex; gap: 0; overflow-x: auto; border-bottom: 2px solid rgba(255,255,255,0.08); }
+  .tab { padding: 11px 20px; color: #90CAF9; font-size: 0.82rem; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; font-weight: 500; }
+  .tab:hover { background: rgba(255,255,255,0.06); color: white; }
+  .tab.active { color: white; border-bottom-color: #3B82F6; background: rgba(59,130,246,0.12); }
+
+  /* ── LAYOUT & GRIDS ──────────────────────────────────────────────── */
+  .main { padding: 18px; max-width: 1400px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .section-title { color: white; font-size: 1.1rem; font-weight: 700; margin: 18px 0 10px; padding: 10px 16px; border-radius: 8px; display: flex; align-items: center; gap: 8px; }
+  
+  .kpi-grid { display: grid; gap: 10px; margin-bottom: 14px; }
+  .g2 { grid-template-columns: repeat(2,1fr); }
+  .g3 { grid-template-columns: repeat(3,1fr); }
+  .g4 { grid-template-columns: repeat(4,1fr); }
+  .g5 { grid-template-columns: repeat(5,1fr); }
+  @media(max-width:900px){.g5{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.g5,.g4,.g3{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+
+  .kpi-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 16px; text-align: center; transition: transform 0.15s; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+  .kpi-card .label { color: #94A3B8; font-size: 0.72rem; text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+  .kpi-card .val { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+  .kpi-card .sub { color: #64748B; font-size: 0.68rem; margin-top: 4px; }
+  .kpi-card .target-tag { display: inline-block; background: rgba(255,255,255,0.08); border-radius: 4px; padding: 1px 7px; font-size: 0.65rem; color: #CBD5E1; margin-top: 5px; }
+
+  .val-red { color: #F87171; } .val-green { color: #4ADE80; } .val-amber { color: #FCD34D; } .val-blue { color: #60A5FA; } .val-white { color: #F8FAFC; }
+  .card-red { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.08); }
+  .card-green { border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.06); }
+  .card-amber { border-color: rgba(252,211,77,0.3); background: rgba(252,211,77,0.06); }
+
+  /* ── TABLE ───────────────────────────────────────────────────────── */
+  .compare-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .compare-table th { padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; font-weight: 700; text-align: center; }
+  .compare-table th.label-col { text-align: left; }
+  .compare-table td { padding: 9px 14px; font-size: 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
+  .compare-table td.label-col { text-align: left; color: #CBD5E1; font-weight: 500; }
+  .compare-table tr:hover td { background: rgba(255,255,255,0.04); }
+  .compare-table thead { border-radius: 8px; }
+  .th-at { background: var(--at); color: white; } .th-tg { background: var(--tg); color: white; }
+  .th-proj { background: var(--proj); color: white; } .th-kpi { background: #1E293B; color: #94A3B8; }
+
+  .num-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 28px; padding: 0 10px; border-radius: 6px; font-weight: 700; font-size: 1rem; }
+  .nb-red { background: rgba(248,113,113,0.18); color: #F87171; } .nb-green { background: rgba(74,222,128,0.15); color: #4ADE80; }
+  .nb-amber { background: rgba(252,211,77,0.15); color: #FCD34D; } .nb-blue { background: rgba(96,165,250,0.15); color: #60A5FA; }
+  .nb-gray { background: rgba(148,163,184,0.15); color: #CBD5E1; } .nb-proj { background: rgba(14,102,85,0.35); color: #6EE7B7; }
+
+  /* ── PROGRESS BAR ────────────────────────────────────────────────── */
+  .progress-wrap { margin: 4px 0; }
+  .progress-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .pf-green { background: linear-gradient(90deg, #059669, #4ADE80); }
+  .pf-amber { background: linear-gradient(90deg, #D97706, #FCD34D); }
+  .progress-label { color: #94A3B8; font-size: 0.68rem; margin-top: 2px; text-align: right; }
+
+  /* ── PANELS ──────────────────────────────────────────────────────── */
+  .panel { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+  .panel-title { color: #94A3B8; font-size: 0.72rem; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .panel-title::before { content: ''; display: block; width: 3px; height: 14px; border-radius: 2px; }
+  .pt-red::before { background: #F87171; } .pt-green::before { background: #4ADE80; } .pt-amber::before { background: #FCD34D; } .pt-blue::before { background: #60A5FA; }
+  
+  .col-grid { display: grid; gap: 14px; }
+  .col-2 { grid-template-columns: 1fr 1fr; } .col-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media(max-width:800px){.col-2,.col-3{grid-template-columns:1fr}}
+
+  /* ── FOOTER ──────────────────────────────────────────────────────── */
+  .footer { background: var(--navy2); border-top: 1px solid rgba(255,255,255,0.07); padding: 12px 28px; margin-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+  .footer p { color: #475569; font-size: 0.72rem; }
+  .divider { height: 1px; background: rgba(255,255,255,0.07); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>🏗 A'Thuraya City — <span>HSE Master Live Dashboard</span></h1>
+  <p>F&M Middle East Engineering Consultancy &nbsp;·&nbsp; Prepared and Owned by Amjad Al Batrani</p>
+  <div class="top-meta">
+    <div class="badge"><div class="dot"></div> LIVE DATA CONNECTED</div>
+    <div class="badge">📅 <span id="today-date"></span></div>
+    <div class="badge">🏢 Contractors: Al Tasnim &amp; Target</div>
+    <div class="badge">📍 Muscat, Sultanate of Oman</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showView('master')">📊 Master Dashboard</div>
+  <div class="tab" onclick="showView('at')">🏗 Al Tasnim KPIs</div>
+  <div class="tab" onclick="showView('tg')">🔧 Target KPIs</div>
+  <div class="tab" onclick="showView('proj')">🎯 Project Combined</div>
+</div>
+
+<div class="main">
+
+<div class="view active" id="view-master">
+  <div class="section-title" style="background:linear-gradient(90deg,#1E293B,#0F2744);border:1px solid rgba(255,255,255,0.08)">📈 Project-Wide Headline KPIs</div>
+
+  <div class="kpi-grid g5">
+    <div class="kpi-card card-red"><div class="label">Total Incidents</div><div class="val val-red" id="h-inc">0</div><div class="sub">Both contractors</div></div>
+    <div class="kpi-card card-red"><div class="label">Lost Time Injuries</div><div class="val val-red" id="h-lti">0</div><div class="sub">Project combined</div></div>
+    <div class="kpi-card"><div class="label">Open CAPAs</div><div class="val val-amber" id="h-capa">0</div><div class="sub">Closure: <span id="h-capa-rate">0%</span></div></div>
+    <div class="kpi-card"><div class="label">Open NCRs</div><div class="val val-green" id="h-ncr">0</div><div class="sub">Combined open</div></div>
+    <div class="kpi-card"><div class="label">PTW Issued</div><div class="val val-blue" id="h-ptw">0</div><div class="target-tag">Active: <span id="h-ptw-open">0</span></div></div>
+  </div>
+
+  <div class="section-title" style="background:linear-gradient(90deg,#1E3A5F,#0F2744);border:1px solid rgba(255,255,255,0.08)">⚡ Contractor vs Contractor — Side by Side</div>
+
+  <div class="panel">
+    <div class="panel-title pt-red">🚨 SECTION 1 — HSE INCIDENTS</div>
+    <table class="compare-table">
+      <thead><tr><th class="th-kpi label-col">KPI</th><th class="th-at">AL TASNIM</th><th class="th-tg">TARGET</th><th class="th-proj">PROJECT</th></tr></thead>
+      <tbody>
+        <tr><td class="label-col">Total Incidents</td><td><span class="num-badge nb-blue" id="m-inc-at">0</span></td><td><span class="num-badge nb-blue" id="m-inc-tg">0</span></td><td><span class="num-badge nb-proj" id="m-inc-p">0</span></td></tr>
+        <tr><td class="label-col">Fatalities</td><td><span class="num-badge nb-green" id="m-fat-at">0</span></td><td><span class="num-badge nb-green" id="m-fat-tg">0</span></td><td><span class="num-badge nb-green" id="m-fat-p">0</span></td></tr>
+        <tr><td class="label-col">Lost Time Injuries (LTI)</td><td><span class="num-badge nb-red" id="m-lti-at">0</span></td><td><span class="num-badge nb-green" id="m-lti-tg">0</span></td><td><span class="num-badge nb-red" id="m-lti-p">0</span></td></tr>
+        <tr><td class="label-col">Recordable Injuries</td><td><span class="num-badge nb-green" id="m-rec-at">0</span></td><td><span class="num-badge nb-green" id="m-rec-tg">0</span></td><td><span class="num-badge nb-green" id="m-rec-p">0</span></td></tr>
+        <tr><td class="label-col">First Aid Cases</td><td><span class="num-badge nb-green" id="m-fa-at">0</span></td><td><span class="num-badge nb-green" id="m-fa-tg">0</span></td><td><span class="num-badge nb-green" id="m-fa-p">0</span></td></tr>
+        <tr><td class="label-col">Near Misses</td><td><span class="num-badge nb-amber" id="m-nm-at">0</span></td><td><span class="num-badge nb-green" id="m-nm-tg">0</span></td><td><span class="num-badge nb-amber" id="m-nm-p">0</span></td></tr>
+        <tr><td class="label-col">Unsafe Acts / Conditions</td><td><span class="num-badge nb-gray" id="m-ua-at">0</span></td><td><span class="num-badge nb-gray" id="m-ua-tg">0</span></td><td><span class="num-badge nb-gray" id="m-ua-p">0</span></td></tr>
+        <tr><td class="label-col">Near Miss : LTI Ratio</td><td><span class="num-badge nb-green" id="m-nmlti-at">0</span></td><td><span class="num-badge nb-gray" id="m-nmlti-tg">0</span></td><td><span class="num-badge nb-green" id="m-nmlti-p">0</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title pt-green">✅ SECTION 2 — CAPA REGISTER</div>
+    <table class="compare-table">
+      <thead><tr><th class="th-kpi label-col">KPI</th><th class="th-at">AL TASNIM</th><th class="th-tg">TARGET</th><th class="th-proj">PROJECT</th></tr></thead>
+      <tbody>
+        <tr><td class="label-col">Total CAPAs</td><td><span class="num-badge nb-blue" id="m-capa-tot-at">0</span></td><td><span class="num-badge nb-blue" id="m-capa-tot-tg">0</span></td><td><span class="num-badge nb-proj" id="m-capa-tot-p">0</span></td></tr>
+        <tr><td class="label-col">Open CAPAs</td><td><span class="num-badge nb-amber" id="m-capa-op-at">0</span></td><td><span class="num-badge nb-amber" id="m-capa-op-tg">0</span></td><td><span class="num-badge nb-amber" id="m-capa-op-p">0</span></td></tr>
+        <tr><td class="label-col">Closed CAPAs</td><td><span class="num-badge nb-green" id="m-capa-cl-at">0</span></td><td><span class="num-badge nb-green" id="m-capa-cl-tg">0</span></td><td><span class="num-badge nb-green" id="m-capa-cl-p">0</span></td></tr>
+        <tr><td class="label-col">Closure Rate</td>
+          <td><div style="width:120px;margin:0 auto"><div class="progress-bar"><div class="progress-fill pf-amber" id="m-capa-bar-at" style="width:0%"></div></div><div class="progress-label" id="m-capa-lbl-at">0%</div></div></td>
+          <td><div style="width:120px;margin:0 auto"><div class="progress-bar"><div class="progress-fill pf-amber" id="m-capa-bar-tg" style="width:0%"></div></div><div class="progress-label" id="m-capa-lbl-tg">0%</div></div></td>
+          <td><div style="width:120px;margin:0 auto"><div class="progress-bar"><div class="progress-fill pf-amber" id="m-capa-bar-p" style="width:0%"></div></div><div class="progress-label" id="m-capa-lbl-p">0%</div></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-grid col-2">
+    <div class="panel">
+      <div class="panel-title pt-amber">📋 NCR STATUS</div>
+      <table class="compare-table">
+        <thead><tr><th class="th-kpi label-col">KPI</th><th class="th-at">AT</th><th class="th-tg">TG</th><th class="th-proj">PROJ</th></tr></thead>
+        <tbody>
+          <tr><td class="label-col">Total NCRs</td><td><span class="num-badge nb-blue" id="m-ncr-tot-at">0</span></td><td><span class="num-badge nb-blue" id="m-ncr-tot-tg">0</span></td><td><span class="num-badge nb-proj" id="m-ncr-tot-p">0</span></td></tr>
+          <tr><td class="label-col">Open</td><td><span class="num-badge nb-green" id="m-ncr-op-at">0</span></td><td><span class="num-badge nb-green" id="m-ncr-op-tg">0</span></td><td><span class="num-badge nb-green" id="m-ncr-op-p">0</span></td></tr>
+          <tr><td class="label-col">Closed</td><td><span class="num-badge nb-green" id="m-ncr-cl-at">0</span></td><td><span class="num-badge nb-green" id="m-ncr-cl-tg">0</span></td><td><span class="num-badge nb-green" id="m-ncr-cl-p">0</span></td></tr>
+          <tr><td class="label-col">Critical Open</td><td><span class="num-badge nb-green" id="m-ncr-crit-at">0</span></td><td><span class="num-badge nb-green" id="m-ncr-crit-tg">0</span></td><td><span class="num-badge nb-green" id="m-ncr-crit-p">0</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-title pt-red">👁️ OBSERVATIONS</div>
+      <table class="compare-table">
+        <thead><tr><th class="th-kpi label-col">KPI</th><th class="th-at">AT</th><th class="th-tg">TG</th><th class="th-proj">PROJ</th></tr></thead>
+        <tbody>
+          <tr><td class="label-col">Total OBS</td><td><span class="num-badge nb-blue" id="m-obs-tot-at">0</span></td><td><span class="num-badge nb-blue" id="m-obs-tot-tg">0</span></td><td><span class="num-badge nb-proj" id="m-obs-tot-p">0</span></td></tr>
+          <tr><td class="label-col">Open</td><td><span class="num-badge nb-red" id="m-obs-op-at">0</span></td><td><span class="num-badge nb-red" id="m-obs-op-tg">0</span></td><td><span class="num-badge nb-red" id="m-obs-op-p">0</span></td></tr>
+          <tr><td class="label-col">Closed</td><td><span class="num-badge nb-green" id="m-obs-cl-at">0</span></td><td><span class="num-badge nb-green" id="m-obs-cl-tg">0</span></td><td><span class="num-badge nb-green" id="m-obs-cl-p">0</span></td></tr>
+          <tr><td class="label-col">Overdue</td><td><span class="num-badge nb-red" id="m-obs-od-at">0</span></td><td><span class="num-badge nb-red" id="m-obs-od-tg">0</span></td><td><span class="num-badge nb-red" id="m-obs-od-p">0</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title pt-blue">📄 PERMIT TO WORK (PTW)</div>
+    <table class="compare-table">
+      <thead><tr><th class="th-kpi label-col">KPI</th><th class="th-at">AL TASNIM</th><th class="th-tg">TARGET</th><th class="th-proj">PROJECT</th></tr></thead>
+      <tbody>
+        <tr><td class="label-col">Total Permits</td><td><span class="num-badge nb-blue" id="m-ptw-tot-at">0</span></td><td><span class="num-badge nb-blue" id="m-ptw-tot-tg">0</span></td><td><span class="num-badge nb-proj" id="m-ptw-tot-p">0</span></td></tr>
+        <tr><td class="label-col">Open</td><td><span class="num-badge nb-amber" id="m-ptw-op-at">0</span></td><td><span class="num-badge nb-green" id="m-ptw-op-tg">0</span></td><td><span class="num-badge nb-amber" id="m-ptw-op-p">0</span></td></tr>
+        <tr><td class="label-col">Closed</td><td><span class="num-badge nb-green" id="m-ptw-cl-at">0</span></td><td><span class="num-badge nb-green" id="m-ptw-cl-tg">0</span></td><td><span class="num-badge nb-green" id="m-ptw-cl-p">0</span></td></tr>
+        <tr><td class="label-col">Cancelled</td><td><span class="num-badge nb-red" id="m-ptw-canc-at">0</span></td><td><span class="num-badge nb-green" id="m-ptw-canc-tg">0</span></td><td><span class="num-badge nb-gray" id="m-ptw-canc-p">0</span></td></tr>
+        <tr><td class="label-col">Hot Work</td><td><span class="num-badge nb-gray" id="m-ptw-hot-at">0</span></td><td><span class="num-badge nb-gray" id="m-ptw-hot-tg">0</span></td><td><span class="num-badge nb-gray" id="m-ptw-hot-p">0</span></td></tr>
+        <tr><td class="label-col">Cold Work</td><td><span class="num-badge nb-gray" id="m-ptw-cold-at">0</span></td><td><span class="num-badge nb-gray" id="m-ptw-cold-tg">0</span></td><td><span class="num-badge nb-gray" id="m-ptw-cold-p">0</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="view" id="view-at">
+  <div class="section-title" style="background:linear-gradient(90deg,var(--at),#1A5276);border:1px solid rgba(255,255,255,0.1)">🏗 AL TASNIM Dashboard</div>
+  <div class="kpi-grid g5">
+    <div class="kpi-card card-red"><div class="label">Total Incidents</div><div class="val val-red" id="v-inc-at">0</div></div>
+    <div class="kpi-card card-red"><div class="label">LTI</div><div class="val val-red" id="v-lti-at">0</div></div>
+    <div class="kpi-card"><div class="label">Fatalities</div><div class="val val-green" id="v-fat-at">0</div></div>
+    <div class="kpi-card card-amber"><div class="label">Near Misses</div><div class="val val-amber" id="v-nm-at">0</div></div>
+    <div class="kpi-card card-green"><div class="label">NM:LTI Ratio</div><div class="val val-green" id="v-nmlti-at">0</div></div>
+  </div>
+  <div class="col-grid col-2">
+    <div class="panel">
+      <div class="panel-title pt-red">🚨 Incident Breakdown</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Recordable</div><div class="val val-green" id="v-rec-at">0</div></div>
+        <div class="kpi-card"><div class="label">First Aid</div><div class="val val-green" id="v-fa-at">0</div></div>
+        <div class="kpi-card"><div class="label">Unsafe Acts</div><div class="val val-white" id="v-ua-at">0</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title pt-green">✅ CAPA Register</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Total</div><div class="val val-blue" id="v-capa-tot-at">0</div></div>
+        <div class="kpi-card card-amber"><div class="label">Open</div><div class="val val-amber" id="v-capa-op-at">0</div></div>
+        <div class="kpi-card card-green"><div class="label">Closed</div><div class="val val-green" id="v-capa-cl-at">0</div></div>
+        <div class="kpi-card card-green"><div class="label">Closure Rate</div><div class="val val-amber" id="v-capa-lbl2-at">0%</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-grid col-3">
+    <div class="panel">
+      <div class="panel-title pt-amber">📋 NCR</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Total</div><div class="val val-blue" id="v-ncr-tot-at">0</div></div>
+        <div class="kpi-card card-green"><div class="label">Open</div><div class="val val-green" id="v-ncr-op-at">0</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title pt-red">👁️ Observations</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Total</div><div class="val val-blue" id="v-obs-tot-at">0</div></div>
+        <div class="kpi-card card-red"><div class="label">Open</div><div class="val val-red" id="v-obs-op-at">0</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title pt-blue">📄 PTW</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Total</div><div class="val val-blue" id="v-ptw-tot-at">0</div></div>
+        <div class="kpi-card card-amber"><div class="label">Open</div><div class="val val-amber" id="v-ptw-op-at">0</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-tg">
+  <div class="section-title" style="background:linear-gradient(90deg,var(--tg),#5D3E1A);border:1px solid rgba(255,255,255,0.1)">🔧 TARGET Dashboard</div>
+  <div class="kpi-grid g5">
+    <div class="kpi-card card-green"><div class="label">Total Incidents</div><div class="val val-green" id="v-inc-tg">0</div></div>
+    <div class="kpi-card card-green"><div class="label">LTI</div><div class="val val-green" id="v-lti-tg">0</div></div>
+    <div class="kpi-card card-green"><div class="label">Fatalities</div><div class="val val-green" id="v-fat-tg">0</div></div>
+    <div class="kpi-card card-green"><div class="label">Near Misses</div><div class="val val-green" id="v-nm-tg">0</div></div>
+    <div class="kpi-card"><div class="label">CAPA Closure</div><div class="val val-amber" id="v-capa-lbl2-tg">0%</div></div>
+  </div>
+  <div class="col-grid col-2">
+    <div class="panel">
+      <div class="panel-title pt-green">🚨 Incident Breakdown</div>
+      <div class="kpi-grid g3">
+        <div class="kpi-card card-green"><div class="label">Recordable</div><div class="val val-green" id="v-rec-tg">0</div></div>
+        <div class="kpi-card card-green"><div class="label">First Aid</div><div class="val val-green" id="v-fa-tg">0</div></div>
+        <div class="kpi-card card-green"><div class="label">Unsafe Acts</div><div class="val val-green" id="v-ua-tg">0</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title pt-green">✅ CAPA Register</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Total</div><div class="val val-blue" id="v-capa-tot-tg">0</div></div>
+        <div class="kpi-card card-amber"><div class="label">Open</div><div class="val val-amber" id="v-capa-op-tg">0</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-grid col-3">
+    <div class="panel">
+      <div class="panel-title pt-amber">📋 NCR</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Total</div><div class="val val-blue" id="v-ncr-tot-tg">0</div></div>
+        <div class="kpi-card card-green"><div class="label">Open</div><div class="val val-green" id="v-ncr-op-tg">0</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title pt-red">👁️ Observations</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Total</div><div class="val val-blue" id="v-obs-tot-tg">0</div></div>
+        <div class="kpi-card card-red"><div class="label">Open</div><div class="val val-red" id="v-obs-op-tg">0</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title pt-blue">📄 PTW</div>
+      <div class="kpi-grid g2">
+        <div class="kpi-card"><div class="label">Total</div><div class="val val-blue" id="v-ptw-tot-tg">0</div></div>
+        <div class="kpi-card card-green"><div class="label">Open</div><div class="val val-green" id="v-ptw-op-tg">0</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-proj">
+  <div class="section-title" style="background:linear-gradient(90deg,var(--proj),#0B5345);border:1px solid rgba(255,255,255,0.1)">🎯 PROJECT COMBINED</div>
+  <div class="kpi-grid g4">
+    <div class="kpi-card card-red"><div class="label">Total Incidents</div><div class="val val-red" id="v-inc-p">0</div></div>
+    <div class="kpi-card card-red"><div class="label">LTIs (Combined)</div><div class="val val-red" id="v-lti-p">0</div></div>
+    <div class="kpi-card card-green"><div class="label">Fatalities</div><div class="val val-green" id="v-fat-p">0</div></div>
+    <div class="kpi-card card-amber"><div class="label">Open CAPAs</div><div class="val val-amber" id="v-capa-op-p">0</div></div>
+  </div>
+</div>
+
+</div><div class="footer">
+  <p>🔒 A'Thuraya City HSE Dashboard Connected to CSV</p>
+  <p id="footer-date"></p>
+</div>
+<script>
+  // Setup standard date
+  const d = new Date();
+  const ds = d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  document.getElementById('today-date').textContent = ds;
+  document.getElementById('footer-date').textContent = 'Live System Activated: ' + ds;
+
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('view-'+id).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  // UPDATED: Now looking for the exact CSV file name you provided
+  const CSV_FILE_URL = 'HSE_Master_LIVE_Dashboard.csv'; 
+  const REFRESH_RATE = 5000;
+
+  async function updateDashboard() {
+    try {
+      if (window.location.protocol === 'file:') {
+        throw new Error("Cannot run on 'file://'. Please use VS Code Live Server.");
+      }
+
+      const response = await fetch(CSV_FILE_URL);
+      
+      if (!response.ok) {
+        throw new Error(`Could not find file: ${CSV_FILE_URL}`);
+      }
+      
+      const csvText = await response.text();
+      const rows = csvText.split(/\r?\n/).map(r => r.split(','));
+
+      let section = '';
+      const data = {};
+      let rowsParsed = 0;
+
+      rows.forEach(row => {
+        if (!row[0]) return;
+        const keyName = row[0].trim();
+        
+        if (keyName === 'Total Incidents') section = 'INC';
+        if (keyName === 'Total CAPAs') section = 'CAPA';
+        if (keyName === 'Total NCRs') section = 'NCR';
+        if (keyName === 'Total Observations') section = 'OBS';
+        if (keyName === 'Total Permits Issued') section = 'PTW';
+
+        const uniqueKey = `${section}_${keyName}`;
+        
+        data[uniqueKey] = {
+          at: row[1] ? row[1].trim() : "0",     
+          tg: row[4] ? row[4].trim() : "0",     
+          proj: row[7] ? row[7].trim() : "0"    
+        };
+        rowsParsed++;
+      });
+
+      if (rowsParsed < 5) {
+         console.warn("CSV was read, but very few rows were found. Check your CSV formatting.");
+      }
+
+      const setVals = (ids, value) => {
+        if(value === undefined || value === "") return;
+        let finalVal = value;
+        let numCheck = parseFloat(value);
+        if(!isNaN(numCheck) && value.includes('.') && value.length > 4) {
+          finalVal = numCheck.toFixed(2);
+        }
+        ids.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = finalVal;
+        });
+      };
+
+      const setPct = (ids, barIds, value) => {
+        if(value === undefined || value === "") return;
+        let pct = value;
+        let numCheck = parseFloat(value);
+        if(!isNaN(numCheck) && !value.includes('%')) {
+          pct = Math.round(numCheck * 100) + '%';
+        }
+        ids.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = pct;
+        });
+        barIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.width = pct;
+        });
+      };
+
+      // 1. INCIDENTS
+      setVals(['h-inc', 'm-inc-p', 'v-inc-p'], data['INC_Total Incidents']?.proj);
+      setVals(['m-inc-at', 'v-inc-at'], data['INC_Total Incidents']?.at);
+      setVals(['m-inc-tg', 'v-inc-tg'], data['INC_Total Incidents']?.tg);
+      
+      setVals(['h-lti', 'm-lti-p', 'v-lti-p'], data['INC_Lost Time Injuries (LTI)']?.proj);
+      setVals(['m-lti-at', 'v-lti-at'], data['INC_Lost Time Injuries (LTI)']?.at);
+      setVals(['m-lti-tg', 'v-lti-tg'], data['INC_Lost Time Injuries (LTI)']?.tg);
+
+      setVals(['m-fat-p', 'v-fat-p'], data['INC_Fatalities']?.proj);
+      setVals(['m-fat-at', 'v-fat-at'], data['INC_Fatalities']?.at);
+      setVals(['m-fat-tg', 'v-fat-tg'], data['INC_Fatalities']?.tg);
+
+      setVals(['m-nm-p'], data['INC_Near Misses']?.proj);
+      setVals(['m-nm-at', 'v-nm-at'], data['INC_Near Misses']?.at);
+      setVals(['m-nm-tg', 'v-nm-tg'], data['INC_Near Misses']?.tg);
+      
+      setVals(['m-nmlti-p'], data['INC_Near Miss : LTI Ratio']?.proj);
+      setVals(['m-nmlti-at', 'v-nmlti-at'], data['INC_Near Miss : LTI Ratio']?.at);
+      setVals(['m-nmlti-tg'], data['INC_Near Miss : LTI Ratio']?.tg);
+
+      setVals(['m-rec-p'], data['INC_Recordable Injuries']?.proj);
+      setVals(['m-rec-at', 'v-rec-at'], data['INC_Recordable Injuries']?.at);
+      setVals(['m-rec-tg', 'v-rec-tg'], data['INC_Recordable Injuries']?.tg);
+
+      setVals(['m-fa-p'], data['INC_First Aid Cases']?.proj);
+      setVals(['m-fa-at', 'v-fa-at'], data['INC_First Aid Cases']?.at);
+      setVals(['m-fa-tg', 'v-fa-tg'], data['INC_First Aid Cases']?.tg);
+
+      setVals(['m-ua-p'], data['INC_Unsafe Acts / Conditions']?.proj);
+      setVals(['m-ua-at', 'v-ua-at'], data['INC_Unsafe Acts / Conditions']?.at);
+      setVals(['m-ua-tg', 'v-ua-tg'], data['INC_Unsafe Acts / Conditions']?.tg);
+
+      // 2. CAPA
+      setVals(['m-capa-tot-p'], data['CAPA_Total CAPAs']?.proj);
+      setVals(['m-capa-tot-at', 'v-capa-tot-at'], data['CAPA_Total CAPAs']?.at);
+      setVals(['m-capa-tot-tg', 'v-capa-tot-tg'], data['CAPA_Total CAPAs']?.tg);
+
+      setVals(['h-capa', 'm-capa-op-p', 'v-capa-op-p'], data['CAPA_Open CAPAs']?.proj);
+      setVals(['m-capa-op-at', 'v-capa-op-at'], data['CAPA_Open CAPAs']?.at);
+      setVals(['m-capa-op-tg', 'v-capa-op-tg'], data['CAPA_Open CAPAs']?.tg);
+
+      setVals(['m-capa-cl-p'], data['CAPA_Closed CAPAs']?.proj);
+      setVals(['m-capa-cl-at', 'v-capa-cl-at'], data['CAPA_Closed CAPAs']?.at);
+      setVals(['m-capa-cl-tg'], data['CAPA_Closed CAPAs']?.tg);
+
+      setPct(['h-capa-rate', 'm-capa-lbl-p'], ['m-capa-bar-p'], data['CAPA_CAPA Closure Rate']?.proj);
+      setPct(['m-capa-lbl-at', 'v-capa-lbl2-at'], ['m-capa-bar-at'], data['CAPA_CAPA Closure Rate']?.at);
+      setPct(['m-capa-lbl-tg', 'v-capa-lbl2-tg'], ['m-capa-bar-tg'], data['CAPA_CAPA Closure Rate']?.tg);
+
+      // 3. NCR
+      setVals(['m-ncr-tot-p'], data['NCR_Total NCRs']?.proj);
+      setVals(['m-ncr-tot-at', 'v-ncr-tot-at'], data['NCR_Total NCRs']?.at);
+      setVals(['m-ncr-tot-tg', 'v-ncr-tot-tg'], data['NCR_Total NCRs']?.tg);
+
+      setVals(['h-ncr', 'm-ncr-op-p'], data['NCR_Open NCRs']?.proj);
+      setVals(['m-ncr-op-at', 'v-ncr-op-at'], data['NCR_Open NCRs']?.at);
+      setVals(['m-ncr-op-tg', 'v-ncr-op-tg'], data['NCR_Open NCRs']?.tg);
+
+      setVals(['m-ncr-cl-p'], data['NCR_Closed NCRs']?.proj);
+      setVals(['m-ncr-cl-at'], data['NCR_Closed NCRs']?.at);
+      setVals(['m-ncr-cl-tg'], data['NCR_Closed NCRs']?.tg);
+
+      setVals(['m-ncr-crit-p'], data['NCR_Critical Open']?.proj);
+      setVals(['m-ncr-crit-at'], data['NCR_Critical Open']?.at);
+      setVals(['m-ncr-crit-tg'], data['NCR_Critical Open']?.tg);
+
+      // 4. OBSERVATIONS
+      setVals(['m-obs-tot-p'], data['OBS_Total Observations']?.proj);
+      setVals(['m-obs-tot-at', 'v-obs-tot-at'], data['OBS_Total Observations']?.at);
+      setVals(['m-obs-tot-tg', 'v-obs-tot-tg'], data['OBS_Total Observations']?.tg);
+
+      setVals(['m-obs-op-p'], data['OBS_Open']?.proj);
+      setVals(['m-obs-op-at', 'v-obs-op-at'], data['OBS_Open']?.at);
+      setVals(['m-obs-op-tg', 'v-obs-op-tg'], data['OBS_Open']?.tg);
+
+      setVals(['m-obs-cl-p'], data['OBS_Closed']?.proj);
+      setVals(['m-obs-cl-at'], data['OBS_Closed']?.at);
+      setVals(['m-obs-cl-tg'], data['OBS_Closed']?.tg);
+
+      setVals(['m-obs-od-p'], data['OBS_Overdue']?.proj);
+      setVals(['m-obs-od-at'], data['OBS_Overdue']?.at);
+      setVals(['m-obs-od-tg'], data['OBS_Overdue']?.tg);
+
+      // 5. PTW
+      setVals(['h-ptw', 'm-ptw-tot-p'], data['PTW_Total Permits Issued']?.proj);
+      setVals(['m-ptw-tot-at', 'v-ptw-tot-at'], data['PTW_Total Permits Issued']?.at);
+      setVals(['m-ptw-tot-tg', 'v-ptw-tot-tg'], data['PTW_Total Permits Issued']?.tg);
+
+      setVals(['h-ptw-open', 'm-ptw-op-p'], data['PTW_Open']?.proj);
+      setVals(['m-ptw-op-at', 'v-ptw-op-at'], data['PTW_Open']?.at);
+      setVals(['m-ptw-op-tg', 'v-ptw-op-tg'], data['PTW_Open']?.tg);
+
+      setVals(['m-ptw-cl-p'], data['PTW_Closed']?.proj);
+      setVals(['m-ptw-cl-at'], data['PTW_Closed']?.at);
+      setVals(['m-ptw-cl-tg'], data['PTW_Closed']?.tg);
+
+      setVals(['m-ptw-canc-p'], data['PTW_Cancelled']?.proj);
+      setVals(['m-ptw-canc-at'], data['PTW_Cancelled']?.at);
+      setVals(['m-ptw-canc-tg'], data['PTW_Cancelled']?.tg);
+
+      setVals(['m-ptw-hot-p'], data['PTW_Hot Work']?.proj);
+      setVals(['m-ptw-hot-at'], data['PTW_Hot Work']?.at);
+      setVals(['m-ptw-hot-tg'], data['PTW_Hot Work']?.tg);
+
+      setVals(['m-ptw-cold-p'], data['PTW_Cold Work']?.proj);
+      setVals(['m-ptw-cold-at'], data['PTW_Cold Work']?.at);
+      setVals(['m-ptw-cold-tg'], data['PTW_Cold Work']?.tg);
+
+      // Clear any previous error messages if successful
+      const errBanner = document.getElementById('error-banner');
+      if(errBanner) errBanner.remove();
+
+    } catch (err) {
+      console.error("Dashboard Sync Error:", err);
+      // Show error directly on the dashboard
+      if(!document.getElementById('error-banner')) {
+        const topBar = document.querySelector('.top-bar');
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'error-banner';
+        errorDiv.style.cssText = 'background:#EF4444; color:white; padding:10px; margin-top:10px; border-radius:6px; font-weight:bold; font-size:0.85rem;';
+        errorDiv.textContent = `⚠️ DATA CONNECTION ERROR: ${err.message}`;
+        topBar.appendChild(errorDiv);
+      }
+    }
+  }
+
+  updateDashboard();
+  setInterval(updateDashboard, REFRESH_RATE);
+</script>
